@@ -57,7 +57,7 @@ zstyle ':vcs_info:*' actionformats "${#fg[red]}(%s)-[%b|%a]${#fg[default]}"
 zstyle ':vcs_info:*+set-message:*' hooks vcs_info_hook
 zstyle ':vcs_info:*+no-vcs:*' hooks no_vcs_hook
 
-novcs_color_len=$((${#fg[red]} + ${#fg[default]}))
+novcs_color_len=$((${#fg[yellow]} + ${#fg[default]}))
 noaction_color_len=$((${novcs_color_len} + ${#fg[green]} + ${#fg[default]}))
 action_color_len=$((${novcs_color_len} + ${#fg[red]} + ${#fg[default]}))
 
@@ -83,7 +83,7 @@ function generate_promopt_header() {
 
 function _update_vcs_info_msg() {
   LANG=en_US.UTF-8 vcs_info
-  prompt_left="${fg[red]}[${USER}@${HOST}]${fg[default]} ${PWD/$HOME/"~"}"
+  prompt_left="${fg[yellow]}[${USER}@${HOST}]${fg[default]} ${PWD/$HOME/"~"}"
   generate_promopt_header
 #  RPROMPT="${vcs_info_msg_0_}"
 }
@@ -112,3 +112,31 @@ export VIMCOLOR='molokai'
 export XDG_CONFIG_HOME="$HOME/.config"
 
 source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# --Enable ssh-agent --
+SSH_ENV=$HOME/.ssh/environment
+
+function start_agent {
+  ssh-agent > $SSH_ENV
+  chmod 600 $SSH_ENV
+  . $SSH_ENV > /dev/null
+  ssh-add
+}
+
+if [ -f $SSH_ENV ]; then
+  . $SSH_ENV > /dev/null
+  if ps ${SSH_AGENT_PID:-999999} | grep ssh-agent$ > /dev/null &&
+     test -S $SSH_AUTH_SOCK; then
+    # agent already running
+  else
+    start_agent;
+  fi
+else
+  start_agent
+fi
+
+#eval `ssh-agent`
+
+if [ $SHLVL = 1 ] ; then
+  tmux
+fi
