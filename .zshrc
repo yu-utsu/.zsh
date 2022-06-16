@@ -5,8 +5,8 @@ autoload -Uz colors
 colors
 
 # lscolors
-eval `dircolors ~/.colorrc`
-alias ls='ls -F --color=auto'
+#eval `dircolors ~/.colorrc`
+#alias ls='ls --color=auto'
 
 # --Directories--
 setopt auto_cd
@@ -26,7 +26,7 @@ setopt list_packed
 setopt case_glob
 setopt glob_dots
 setopt mark_dirs
-setopt warn_create_global
+#setopt warn_create_global
 
 # --History--
 HISTFILE=${ZDOTDIR}/.zsh_history
@@ -83,7 +83,7 @@ function generate_promopt_header() {
 
 function _update_vcs_info_msg() {
   LANG=en_US.UTF-8 vcs_info
-  prompt_left="${fg[yellow]}[${USER}@${HOST}]${fg[default]} ${PWD/$HOME/"~"}"
+  prompt_left="${fg[yellow]}[${USER}@${HOST%%.*}]${fg[default]} ${PWD/$HOME/"~"}"
   generate_promopt_header
 #  RPROMPT="${vcs_info_msg_0_}"
 }
@@ -101,17 +101,17 @@ TRAPWINCH() {
 setopt print_eight_bit
 setopt no_beep
 unsetopt promptcr
+umask 027
 
 # --Aliases--
+alias ls='ls -G'
 alias la='ls -A'
-alias ll='ls -l'
-alias lal='ls -Al'
+alias ll='ls -hlF'
+alias lal='ls -AhlF'
 
-# --Envilonment Variables--
-export VIMCOLOR='molokai'
-export XDG_CONFIG_HOME="$HOME/.config"
+alias neomutt='neomutt -F ~/.config/neomutt/muttrc'
 
-source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 # --Enable ssh-agent --
 SSH_ENV=$HOME/.ssh/environment
@@ -120,23 +120,44 @@ function start_agent {
   ssh-agent > $SSH_ENV
   chmod 600 $SSH_ENV
   . $SSH_ENV > /dev/null
-  ssh-add
+  ssh-add .ssh/id_{rsa_local,ecdsa} # | less
 }
 
-if [ -f $SSH_ENV ]; then
-  . $SSH_ENV > /dev/null
-  if ps ${SSH_AGENT_PID:-999999} | grep ssh-agent$ > /dev/null &&
-     test -S $SSH_AUTH_SOCK; then
-    # agent already running
+# --Check ssh-agent is running--
+SSH_AGENT_PID=$(pgrep ssh-agent | tail -1) ; export SSH_AGENT_PID
+if [ -z $SSH_AGENT_PID ]; then
+  if [ -n $SSH_AUTH_SOCK ]; then
+    ssh-add --apple-load-keychain
+    # start ssh-agent
+    SSH_AGENT_PID=$(pgrep ssh-agent | tail -1) ; export SSH_AGENT_PID
   else
-    start_agent;
+    echo "$0: system-default ssh-agent was not found. using external instead"
+    if [ -f $SSH_ENV ]; then
+      . $SSH_ENV > /dev/null
+      if ps ${SSH_AGENT_PID:-999999} | grep ssh-agent > /dev/null && test -S $SSH_AUTH_SOCK; then
+        # agent already running
+      else
+        start_agent
+      fi
+    else
+      start_agent
+    fi
   fi
-else
-  start_agent
 fi
+
+# peco
+source ${HOME}/.config/zsh/functions/peco
 
 #eval `ssh-agent`
 
-if [ $SHLVL = 1 ] ; then
-  tmux
-fi
+#if [ $SHLVL = 1 ] ; then
+#  tmux
+#fi
+
+### thefuck
+eval "$(thefuck --alias)"
+
+### rbenv
+eval "$(rbenv init -)"
+
+export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl)"
